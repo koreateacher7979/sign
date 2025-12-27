@@ -2,483 +2,384 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수행평가 성적 확인 시스템</title>
-    <!-- GitHub Pages 배포 환경에서 최적의 호환성을 보장하는 라이브러리 설정 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디지털 성적 확인 및 서명 시스템</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ExcelJS Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Signature Pad Library -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
-        .canvas-container { touch-action: none; position: relative; width: 100%; height: 100%; background: #fff; border-radius: 1.5rem; }
-        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
-        #loading-overlay { backdrop-filter: blur(12px); z-index: 99999; }
-        .btn-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .btn-hover:active { transform: scale(0.95); }
-        #display-panel { min-height: 650px; display: flex; flex-direction: column; }
-        @media (max-width: 1024px) { #display-panel { min-height: auto; } }
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #858796;
+            --success-color: #1cc88a;
+        }
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding-bottom: 50px;
+        }
+        .container { max-width: 900px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); margin-bottom: 20px; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #e3e6f0; font-weight: bold; color: var(--primary-color); border-radius: 12px 12px 0 0 !important; }
+        
+        #signature-pad-container {
+            border: 2px dashed #d1d3e2;
+            border-radius: 8px;
+            background-color: #fff;
+            position: relative;
+            width: 100%;
+            height: 200px;
+            margin-top: 15px;
+        }
+        #signature-pad {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        #dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .student-chip {
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85rem;
+            border: 1px solid #e3e6f0;
+            transition: all 0.2s;
+            background-color: #f1f3f9;
+        }
+        .student-chip.complete { background-color: var(--success-color); color: white; border-color: var(--success-color); }
+        
+        .hidden { display: none; }
+        .info-table th { width: 35%; background-color: #f8f9fc; vertical-align: middle; }
     </style>
 </head>
-<body class="text-slate-900 overflow-x-hidden min-h-screen">
+<body>
 
-    <!-- 상단 개발자 정보 (요청 사항 유지) -->
-    <div class="bg-[#0F172A] text-slate-400 py-2 px-6 text-[10px] font-bold text-center border-b border-slate-800 uppercase tracking-[0.2em] relative z-20">
-        개발자: 가치있는 미래교육연구소 대표 김병찬
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-dark">📝 디지털 성적 확인 시스템</h2>
+        <p class="text-muted">나이스 엑셀 파일을 업로드하고 반/번호를 입력하여 서명을 진행하세요.</p>
     </div>
 
-    <div id="app" class="max-w-6xl mx-auto p-4 md:p-10">
-        <header class="flex flex-col lg:flex-row justify-between items-center mb-12 gap-8 animate-fade-in">
-            <div class="flex items-center gap-6 text-left w-full lg:w-auto">
-                <div class="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl transform rotate-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight leading-none">수행평가 성적 확인 시스템</h1>
-                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">GitHub Pages Deployment V21 - Final Stable</p>
+    <div class="card" id="step1-card">
+        <div class="card-header">1. 엑셀 파일 업로드 (나이스 양식)</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <input class="form-control" type="file" id="excelFileInput" accept=".xlsx">
+                <div class="form-text mt-2">
+                    * 헤더: 12행 / 데이터: 13행 / B열: 반/번호(예: 1/1) 기준
                 </div>
             </div>
-            
-            <div id="action-buttons" class="hidden flex flex-wrap justify-center gap-3">
-                <button onclick="toggleStatusView()" class="btn-hover flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-6 py-4 rounded-2xl font-black text-sm shadow-sm transition-all hover:bg-slate-50">
-                    현황 확인
-                </button>
-                <button id="main-download-btn" onclick="downloadExcel()" class="btn-hover flex items-center gap-2 bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-lg hover:bg-emerald-600 transition-all active:scale-95">
-                    서명 포함 엑셀 저장
-                </button>
-                <button onclick="resetSystem()" class="p-4 text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl border border-red-100 transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>
-            </div>
-        </header>
-
-        <main class="relative">
-            <!-- 초기화 단계 -->
-            <div id="lib-loading" class="bg-white p-16 rounded-[3.5rem] shadow-xl text-center border border-blue-50 animate-pulse">
-                <div class="inline-block w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-                <p class="font-black text-slate-500 tracking-tighter">보안 라이브러리 엔진을 로드 중입니다...</p>
-            </div>
-
-            <!-- 업로드 섹션 -->
-            <div id="upload-section" class="hidden bg-white border-4 border-dashed border-slate-100 rounded-[4rem] p-12 md:p-32 text-center shadow-sm animate-fade-in">
-                <div class="mx-auto w-24 h-24 bg-blue-50 text-blue-600 rounded-[2.5rem] flex items-center justify-center mb-10 transform hover:scale-110 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                </div>
-                <h2 class="text-3xl md:text-4xl font-black mb-6 text-slate-800 tracking-tight">나이스 성적 파일을 업로드하세요</h2>
-                <p class="text-slate-400 mb-12 font-bold max-w-lg mx-auto leading-relaxed text-sm md:text-base">
-                    "모든 계정에서 성적 조회 및 파일 저장이 가능하도록 데이터 정규화 기술이 적용되었습니다."
-                </p>
-                <input type="file" id="fileInput" accept=".xlsx" class="hidden" onchange="handleFileUpload(event)">
-                <label for="fileInput" class="inline-flex items-center gap-4 bg-blue-600 text-white px-16 py-6 rounded-[2.5rem] cursor-pointer font-black text-xl shadow-[0_20px_50px_rgba(37,99,235,0.4)] hover:bg-blue-700 active:scale-95 transition-all">
-                    엑셀 파일 불러오기
-                </label>
-            </div>
-
-            <!-- 메인 조회 인터페이스 -->
-            <div id="main-interface" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-10 animate-fade-in">
-                <div class="lg:col-span-5 space-y-6">
-                    <div class="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-50 text-left">
-                        <h3 class="text-xl font-black mb-10 flex items-center gap-3 text-slate-800 uppercase tracking-tighter">
-                            본인 성적 조회
-                        </h3>
-                        <div class="space-y-8">
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest text-left">반/번호 (예: 1/1)</label>
-                                <input type="text" id="search-num" placeholder="번호를 입력하세요" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] focus:border-blue-500 focus:bg-white outline-none font-black text-2xl transition-all shadow-inner">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest text-left">성명</label>
-                                <input type="text" id="search-name" placeholder="이름 입력" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] focus:border-blue-500 focus:bg-white outline-none font-black text-2xl transition-all shadow-inner">
-                            </div>
-                            <button onclick="authenticateStudent()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xl hover:bg-black transition-all shadow-xl active:scale-95">성적 조회하기</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-7 bg-white rounded-[3rem] shadow-xl border border-slate-50 overflow-hidden flex flex-col transition-all" id="display-panel">
-                    <div id="welcome-msg" class="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-6 opacity-20"><circle cx="12" cy="12" r="10"/><line x1="12" cy="8" x2="12" y2="12"/><line x1="12" cy="16" x2="12.01" y2="16"/></svg>
-                        <p class="font-bold text-slate-400 text-sm">성적 조회를 위해 정보를 입력해 주세요.</p>
-                    </div>
-
-                    <div id="status-view" class="hidden p-8 h-full flex flex-col text-left">
-                        <div class="flex justify-between items-center mb-8 border-b border-slate-100 pb-6">
-                            <h3 class="text-2xl font-black tracking-tighter">실시간 확인 현황</h3>
-                            <button onclick="toggleStatusView()" class="p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            </button>
-                        </div>
-                        <div id="status-list" class="flex-1 overflow-y-auto pr-3 space-y-3 custom-scrollbar"></div>
-                    </div>
-
-                    <div id="student-detail" class="hidden p-10 md:p-14 flex flex-col h-full animate-fade-in text-left">
-                        <div class="flex justify-between items-start mb-12 gap-4">
-                            <div>
-                                <h2 id="detail-name" class="text-5xl font-black text-slate-900 tracking-tighter mb-2 text-left">성함</h2>
-                                <p id="detail-num" class="text-xl font-bold text-blue-500 uppercase tracking-widest opacity-80 font-mono text-left">Verified Student</p>
-                            </div>
-                            <button onclick="logout()" class="text-red-500 bg-red-50 px-5 py-2.5 rounded-xl font-black text-xs hover:bg-red-100 transition-colors border border-red-100">조회 종료</button>
-                        </div>
-                        <div id="score-container" class="space-y-4 mb-12 flex-1 overflow-y-auto custom-scrollbar pr-2"></div>
-                        <div id="signature-placeholder" class="pt-6 border-t border-slate-50"></div>
-                    </div>
-                </div>
-            </div>
-        </main>
+            <div id="fileInfo" class="hidden alert alert-info py-2 small"></div>
+        </div>
     </div>
 
-    <!-- 서명 모달 -->
-    <div id="signature-modal" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-2xl z-[10000] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[4rem] w-full max-w-4xl overflow-hidden shadow-2xl animate-fade-in text-left">
-            <div class="p-8 md:p-12 border-b border-slate-50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-3xl font-black text-slate-800 tracking-tight uppercase">디지털 성적 확인</h3>
-                    <p class="text-slate-400 font-bold text-sm mt-1 uppercase">이름을 크게 서명해 주세요 (자동 크롭 적용)</p>
+    <div class="card hidden" id="step2-card">
+        <div class="card-header">2. 본인 성적 확인 및 서명</div>
+        <div class="card-body">
+            <div class="row g-2 mb-4">
+                <div class="col-md-5">
+                    <input type="text" id="searchNumber" class="form-control" placeholder="반/번호 (예: 1/1)">
                 </div>
-                <button onclick="closeSignatureModal()" class="p-5 bg-slate-50 rounded-full hover:rotate-90 transition-all text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+                <div class="col-md-5">
+                    <input type="text" id="searchName" class="form-control" placeholder="성명 (예: 홍길동)">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="searchStudent()">조회</button>
+                </div>
             </div>
-            <div class="p-8 md:p-12">
-                <div class="bg-slate-50 border-4 border-slate-100 rounded-[2.5rem] overflow-hidden mb-10 h-[380px] relative canvas-container shadow-inner">
-                    <canvas id="signature-canvas" width="1200" height="380" class="canvas-container"></canvas>
+
+            <div id="studentDetail" class="hidden">
+                <hr>
+                <h5 class="fw-bold mb-3 text-primary">개인 성적 정보</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered info-table" id="studentDataTable">
+                        <!-- JS에서 데이터 채움 -->
+                    </table>
                 </div>
-                <div class="grid grid-cols-2 gap-6">
-                    <button onclick="clearCanvas()" class="py-6 border-2 border-slate-200 text-slate-500 rounded-3xl font-black text-lg hover:bg-slate-50 transition-all uppercase">지우기</button>
-                    <button onclick="saveSignature()" class="py-6 bg-blue-600 text-white rounded-3xl font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all uppercase">확인 완료</button>
+
+                <div class="mt-4">
+                    <label class="form-label fw-bold">서명란 (아래 칸에 서명해 주세요)</label>
+                    <div id="signature-pad-container">
+                        <canvas id="signature-pad"></canvas>
+                    </div>
+                    <div class="mt-2 d-flex justify-content-between">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearSignature()">다시 쓰기</button>
+                        <button class="btn btn-success" onclick="confirmSignature()">확인 및 서명 완료</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 파일 저장 레이어 (강제 저장 버튼 포함) -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/99 z-[100001] flex flex-col items-center justify-center p-10 text-center">
-        <div id="spinner-box" class="flex flex-col items-center">
-            <div class="w-24 h-24 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin mb-10 shadow-2xl"></div>
-            <h2 class="font-black text-slate-800 text-4xl mb-6 tracking-tighter uppercase">Compiling Report...</h2>
-            <p class="text-slate-400 font-bold max-w-sm text-lg leading-relaxed">성적 데이터와 서명을 병합 중입니다. 잠시 후 저장 버튼이 나타납니다.</p>
+    <div class="card hidden" id="admin-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>3. 서명 현황 및 파일 내보내기</span>
+            <button class="btn btn-danger btn-sm" onclick="resetAll()">전체 리셋</button>
         </div>
+        <div class="card-body">
+            <div id="dashboard" class="mb-4">
+                <!-- JS에서 현황 칩 생성 -->
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-dark btn-lg" onclick="downloadUpdatedExcel()">
+                    최종 서명 포함 엑셀 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let workbook = null;
+    let worksheet = null;
+    let studentsData = [];
+    let signatures = {}; 
+    let signaturePad = null;
+    let colMapping = { number: 2, name: -1, remarks: -1 }; 
+    let currentStudentRowIndex = null;
+
+    const HEADER_ROW_INDEX = 12;
+    const DATA_START_ROW_INDEX = 13;
+
+    window.onload = () => {
+        const canvas = document.getElementById('signature-pad');
+        signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            penColor: 'rgb(0, 0, 0)'
+        });
         
-        <div id="manual-save-box" class="hidden animate-fade-in flex flex-col items-center">
-            <div class="bg-emerald-50 text-emerald-600 p-10 rounded-[3.5rem] border-2 border-emerald-100 mb-12 shadow-sm max-w-xl">
-                <p class="font-black text-3xl mb-4 tracking-tighter">파일 준비 완료!</p>
-                <p class="text-sm opacity-80 leading-relaxed font-bold">보안 정책에 관계없이 아래 버튼을 클릭하면 파일을 즉시 저장할 수 있습니다.</p>
-            </div>
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    };
+
+    function resizeCanvas() {
+        const canvas = document.getElementById('signature-pad');
+        if (!canvas) return;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad.clear();
+    }
+
+    function getSafeText(cell) {
+        if (!cell) return "";
+        const val = cell.value;
+        if (val === null || val === undefined) return "";
+        if (typeof val === 'object' && val.richText) {
+            return val.richText.map(t => t.text || "").join("");
+        }
+        if (typeof val === 'object' && val.result !== undefined) {
+            return val.result !== null ? val.result.toString() : "";
+        }
+        if (typeof val === 'object' && val.text) {
+            return val.text.toString();
+        }
+        return val.toString();
+    }
+
+    document.getElementById('excelFileInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(arrayBuffer);
+            worksheet = workbook.worksheets[0];
+
+            parseExcelStructure();
+            loadStudents();
             
-            <a id="final-force-link" href="javascript:void(0)" class="inline-flex items-center gap-6 bg-[#0F172A] text-white px-16 py-8 rounded-[3rem] font-black text-3xl shadow-[0_40px_80px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                엑셀 파일 저장하기
-            </a>
+            document.getElementById('fileInfo').innerText = `✅ 파일 로드 성공: ${file.name} (${studentsData.length}명 대기 중)`;
+            document.getElementById('fileInfo').classList.remove('hidden');
+            document.getElementById('step2-card').classList.remove('hidden');
+            document.getElementById('admin-card').classList.remove('hidden');
             
-            <button onclick="closeLoadingOverlay()" class="mt-16 text-slate-400 font-black underline underline-offset-8 uppercase tracking-widest text-xs opacity-50 hover:opacity-100 transition-all">조회 화면으로 복귀</button>
-        </div>
-    </div>
-
-    <script>
-        let originalBuffer = null;
-        let studentData = [];
-        let signatures = {}; 
-        let currentStudent = null;
-        let teacherName = "담당교사";
-
-        // 라이브러리 체크
-        window.onload = function() {
-            const check = setInterval(() => {
-                if (window.XLSX && window.ExcelJS && window.saveAs) {
-                    clearInterval(check);
-                    document.getElementById('lib-loading').classList.add('hidden');
-                    document.getElementById('upload-section').classList.remove('hidden');
-                }
-            }, 500);
-        };
-
-        const canvas = document.getElementById('signature-canvas');
-        const ctx = canvas.getContext('2d');
-        let drawing = false;
-
-        function getCoords(e) {
-            const rect = canvas.getBoundingClientRect();
-            const cx = (e.clientX || (e.touches && e.touches[0].clientX));
-            const cy = (e.clientY || (e.touches && e.touches[0].clientY));
-            return {
-                x: (cx - rect.left) * (canvas.width / rect.width),
-                y: (cy - rect.top) * (canvas.height / rect.height)
-            };
+            updateDashboard();
+        } catch (err) {
+            console.error(err);
+            alert('파일을 읽는 중 오류가 발생했습니다. 나이스 엑셀 파일이 맞는지 확인해주세요.');
         }
+    });
 
-        const start = (e) => { drawing = true; ctx.beginPath(); const {x,y} = getCoords(e); ctx.moveTo(x,y); if(e.cancelable) e.preventDefault(); };
-        const move = (e) => { if(!drawing) return; const {x,y} = getCoords(e); ctx.lineWidth = 6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#000'; ctx.lineTo(x,y); ctx.stroke(); if(e.cancelable) e.preventDefault(); };
-        const stop = () => { drawing = false; };
+    function parseExcelStructure() {
+        const headerRow = worksheet.getRow(HEADER_ROW_INDEX);
+        colMapping = { number: 2, name: -1, remarks: -1 };
+        
+        headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            const val = getSafeText(cell).trim();
+            if ((val.includes('성명') || val.includes('이름')) && colMapping.name === -1) colMapping.name = colNumber;
+            if (val.includes('비고') && colMapping.remarks === -1) colMapping.remarks = colNumber;
+        });
 
-        canvas.addEventListener('mousedown', start);
-        canvas.addEventListener('mousemove', move);
-        canvas.addEventListener('mouseup', stop);
-        canvas.addEventListener('touchstart', start, {passive: false});
-        canvas.addEventListener('touchmove', move, {passive: false});
-        canvas.addEventListener('touchend', stop);
-
-        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-
-        // [데이터 무결성 강화] 문자열 정규화 및 비교용 함수
-        function cleanString(val) {
-            if (val === null || val === undefined) return "";
-            // 모든 공백, 탭, 줄바꿈 제거 및 문자열화
-            return String(val).replace(/\s/g, '').trim();
+        if (colMapping.name === -1) colMapping.name = 3;
+        if (colMapping.remarks === -1) {
+            colMapping.remarks = headerRow.actualCellCount || 10;
         }
+    }
 
-        async function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                try {
-                    originalBuffer = evt.target.result;
-                    const wb = XLSX.read(originalBuffer, { type: 'array' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                    
-                    const tRow = raw.find(r => Array.isArray(r) && r.some(c => String(c).includes('교과담당교사')));
-                    if(tRow) teacherName = cleanString(tRow.find(c => String(c).includes('교과담당교사')).replace(/.*\(|\).*/g, '')) || "담당교사";
-
-                    // 헤더 정밀 탐색: 행 전체를 돌며 '반/번호'와 '성명'이 동시에 들어있는 첫 행을 찾음
-                    let hIdx = -1;
-                    for (let i = 0; i < raw.length; i++) {
-                        const rowStr = JSON.stringify(raw[i]);
-                        if (rowStr.includes('반/번호') && rowStr.includes('성명')) {
-                            hIdx = i;
-                            break;
-                        }
-                    }
-
-                    if (hIdx === -1) return alert("나이스 엑셀 형식이 아닙니다. '반/번호'와 '성명' 열이 포함되어 있는지 확인해 주세요.");
-                    
-                    const headers = raw[hIdx];
-                    const numIdx = headers.findIndex(c => cleanString(c).includes('반/번호'));
-                    const nameIdx = headers.findIndex(c => cleanString(c).includes('성명'));
-                    const totalIdx = headers.findIndex(c => cleanString(c).includes('합계'));
-
-                    const assessmentCols = [];
-                    const endCol = totalIdx !== -1 ? totalIdx : headers.length;
-                    for(let i = nameIdx + 1; i < endCol; i++) {
-                        if(headers[i] && cleanString(headers[i]) !== "") {
-                            assessmentCols.push({ label: cleanString(headers[i]), idx: i });
-                        }
-                    }
-
-                    studentData = raw.slice(hIdx + 1)
-                        .filter(r => r[numIdx] && r[nameIdx] && !cleanString(r[numIdx]).includes('응시생수'))
-                        .map((r, i) => ({
-                            id: `std-${i}`,
-                            num: cleanString(r[numIdx]),
-                            name: cleanString(r[nameIdx]),
-                            displayNum: String(r[numIdx]).trim(),
-                            displayName: String(r[nameIdx]).trim(),
-                            scores: assessmentCols.map(c => ({ label: c.label, val: r[c.idx] || '0.00' })),
-                            total: totalIdx !== -1 ? r[totalIdx] || '0.00' : '0.00',
-                            rowIdx: hIdx + i + 2 
-                        }));
-
-                    document.getElementById('upload-section').classList.add('hidden');
-                    document.getElementById('main-interface').classList.remove('hidden');
-                    document.getElementById('action-buttons').classList.remove('hidden');
-                    renderStatusList();
-                } catch(err) {
-                    alert("엑셀 파일 로딩 중 오류가 발생했습니다.");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function authenticateStudent() {
-            const inputNum = cleanString(document.getElementById('search-num').value);
-            const inputName = cleanString(document.getElementById('search-name').value);
-            
-            if (!inputNum || !inputName) return alert("반/번호와 성명을 모두 입력해 주세요.");
-
-            // 모든 환경에서 공통적으로 작동하는 정규화 비교
-            const found = studentData.find(s => s.num === inputNum && s.name === inputName);
-            if (found) { 
-                currentStudent = found; 
-                showDetail(); 
-            } else { 
-                alert("일치하는 정보를 찾을 수 없습니다.\n엑셀 파일의 번호(예: 1/1)와 성명을 다시 확인해 주세요."); 
-            }
-        }
-
-        function showDetail() {
-            document.getElementById('welcome-msg').classList.add('hidden');
-            document.getElementById('status-view').classList.add('hidden');
-            document.getElementById('student-detail').classList.remove('hidden');
-            document.getElementById('auth-panel').classList.add('opacity-10', 'blur-sm', 'pointer-events-none');
-            
-            document.getElementById('detail-name').innerText = currentStudent.displayName;
-            document.getElementById('detail-num').innerText = `성적 확인 번호: ${currentStudent.displayNum}`;
-            
-            document.getElementById('score-container').innerHTML = currentStudent.scores.map(s => `
-                <div class="bg-slate-50 p-6 rounded-3xl flex justify-between items-center border border-transparent hover:border-slate-100 transition-all text-left">
-                    <span class="text-slate-500 font-bold uppercase tracking-widest text-[9px] text-left">${s.label}</span>
-                    <span class="text-2xl font-black text-slate-900">${s.val}</span>
-                </div>
-            `).join('') + `
-                <div class="bg-blue-600 p-8 rounded-[2.5rem] flex justify-between items-center text-white shadow-2xl mt-4 transform hover:scale-[1.02] transition-transform">
-                    <span class="font-black text-xl uppercase tracking-widest text-white/90">수행 합계</span>
-                    <span class="text-4xl font-black tracking-tight text-white">${currentStudent.total}</span>
-                </div>
-            `;
-            updateSigUI();
-        }
-
-        function updateSigUI() {
-            const area = document.getElementById('signature-placeholder');
-            if (signatures[currentStudent.id]) {
-                area.innerHTML = `
-                    <div class="p-8 bg-emerald-50 border-4 border-dashed border-emerald-100 rounded-[3rem] text-center flex flex-col items-center animate-fade-in mt-6">
-                        <div class="bg-white p-4 rounded-2xl shadow-sm mb-4 w-full h-32 flex items-center justify-center overflow-hidden border">
-                            <img src="${signatures[currentStudent.id]}" class="h-full w-full object-contain">
-                        </div>
-                        <button onclick="openSignatureModal()" class="text-emerald-500 font-bold underline text-sm uppercase">Signature Edit</button>
-                    </div>
-                `;
-            } else {
-                area.innerHTML = `<button onclick="openSignatureModal()" class="w-full bg-blue-600 text-white py-8 rounded-[2.5rem] font-black text-2xl hover:bg-blue-700 shadow-xl active:scale-95 transition-all mt-6 uppercase tracking-tighter">본인 확인 및 서명</button>`;
-            }
-        }
-
-        function logout() {
-            currentStudent = null;
-            document.getElementById('student-detail').classList.add('hidden');
-            document.getElementById('welcome-msg').classList.remove('hidden');
-            document.getElementById('auth-panel').classList.remove('opacity-10', 'blur-sm', 'pointer-events-none');
-            document.getElementById('search-num').value = "";
-            document.getElementById('search-name').value = "";
-            renderStatusList();
-        }
-
-        function openSignatureModal() { document.getElementById('signature-modal').classList.remove('hidden'); clearCanvas(); }
-        function closeSignatureModal() { document.getElementById('signature-modal').classList.add('hidden'); }
-
-        function saveSignature() {
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0, found = false;
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    if (data[(y * canvas.width + x) * 4 + 3] > 15) {
-                        if (x < minX) minX = x; if (x > maxX) maxX = x;
-                        if (y < minY) minY = y; if (y > maxY) maxY = y;
-                        found = true;
-                    }
-                }
-            }
-            if (!found) return alert("서명 획이 감지되지 않았습니다.");
-            const cropCanvas = document.createElement('canvas');
-            const cropW = (maxX - minX) + 12, cropH = (maxY - minY) + 12;
-            cropCanvas.width = cropW; cropCanvas.height = cropH;
-            const cCtx = cropCanvas.getContext('2d');
-            cCtx.drawImage(canvas, minX - 6, minY - 6, cropW, cropH, 0, 0, cropW, cropH);
-            signatures[currentStudent.id] = cropCanvas.toDataURL('image/png');
-            updateSigUI();
-            closeSignatureModal();
-            renderStatusList();
-        }
-
-        function renderStatusList() {
-            document.getElementById('status-list').innerHTML = studentData.map(s => `
-                <div class="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 group hover:bg-white transition-all text-left">
-                    <div class="flex items-center gap-5">
-                        <span class="text-xs font-black text-slate-400 w-10 text-left">${s.displayNum}</span>
-                        <span class="text-lg font-black text-slate-800 text-left">${s.displayName}</span>
-                    </div>
-                    ${signatures[s.id] ? '<span class="text-emerald-600 font-bold text-xs bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 animate-pulse uppercase tracking-widest">OK</span>' : '<span class="text-slate-300 font-bold text-[10px] uppercase tracking-widest opacity-50">Wait</span>'}
-                </div>
-            `).join('');
-        }
-
-        function toggleStatusView() {
-            const sv = document.getElementById('status-view');
-            const sd = document.getElementById('student-detail');
-            const wm = document.getElementById('welcome-msg');
-            if (sv.classList.contains('hidden')) {
-                sv.classList.remove('hidden'); sd.classList.add('hidden'); wm.classList.add('hidden');
-            } else {
-                sv.classList.add('hidden'); if(currentStudent) sd.classList.remove('hidden'); else wm.classList.remove('hidden');
-            }
-        }
-
-        function closeLoadingOverlay() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-        }
-
-        // [최종 안정화] GitHub 배포 환경 전용 무조건 성공 저장 엔진
-        async function downloadExcel() {
-            if (!originalBuffer) return;
-            
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('spinner-box').classList.remove('hidden');
-            document.getElementById('manual-save-box').classList.add('hidden');
-
-            try {
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(originalBuffer);
-                const worksheet = workbook.worksheets[0];
-
-                let remarkColIdx = -1;
-                worksheet.eachRow({ includeEmpty: true }, (row) => {
-                    row.eachCell({ includeEmpty: true }, (cell, col) => {
-                        if (cell.value && String(cell.value).includes('비고')) remarkColIdx = col;
+    function loadStudents() {
+        studentsData = [];
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            if (rowNumber >= DATA_START_ROW_INDEX) {
+                const num = getSafeText(row.getCell(colMapping.number)).trim();
+                const name = getSafeText(row.getCell(colMapping.name)).trim();
+                if (num || name) {
+                    studentsData.push({
+                        rowIndex: rowNumber,
+                        number: num,
+                        name: name
                     });
-                });
-                if (remarkColIdx === -1) remarkColIdx = 10;
-
-                studentData.forEach(s => {
-                    if (signatures[s.id]) {
-                        const imgId = workbook.addImage({ base64: signatures[s.id], extension: 'png' });
-                        // [V21 정밀 앵커링] 정확한 행 좌표에 꽉 채워 삽입
-                        worksheet.addImage(imgId, {
-                            tl: { col: remarkColIdx - 1, row: s.rowIdx - 1, colOff: 0, rowOff: 0 },
-                            br: { col: remarkColIdx, row: s.rowIdx, colOff: 0, rowOff: 0 },
-                            editAs: 'twoCell'
-                        });
-                    }
-                });
-
-                const buf = await workbook.xlsx.writeBuffer();
-                const fileName = `[성적확인최종]_${teacherName}_성적부.xlsx`;
-                const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-                // [기술적 해결] 1단계: 직접 저장 명령 (FileSaver 우선 작동)
-                try {
-                    window.saveAs(blob, fileName);
-                    // 성공 시 3초 후 레이어 자동 닫기
-                    setTimeout(closeLoadingOverlay, 3000);
-                } catch(e) {}
-
-                // [보안 우회] 2단계: 수동 저장 링크 생성 (Data-URL 방식)
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const dataUrl = e.target.result;
-                    const forceBtn = document.getElementById('final-force-link');
-                    forceBtn.href = dataUrl;
-                    forceBtn.download = fileName;
-
-                    // UI 전환: 로딩 아이콘 숨기고 강제 저장 버튼 노출
-                    document.getElementById('spinner-box').classList.add('hidden');
-                    document.getElementById('manual-save-box').classList.remove('hidden');
-                };
-                reader.readAsDataURL(blob);
-
-            } catch (err) {
-                alert("데이터 생성 중 오류가 발생했습니다. 브라우저를 새로고침 하거나 크롬을 사용해 주세요.");
-                closeLoadingOverlay();
+                }
             }
+        });
+    }
+
+    function searchStudent() {
+        const numInput = document.getElementById('searchNumber').value.trim(); 
+        const nameInput = document.getElementById('searchName').value.trim();
+
+        if (!numInput || !nameInput) {
+            alert('반/번호와 성명을 모두 입력해 주세요.');
+            return;
         }
 
-        function resetSystem() { if(confirm("모든 데이터를 초기화하시겠습니까?")) window.location.reload(); }
-    </script>
+        const student = studentsData.find(s => s.number === numInput && s.name === nameInput);
+
+        if (student) {
+            displayStudent(student);
+        } else {
+            alert('일치하는 학생 정보를 찾을 수 없습니다.\n반/번호(예: 1/1)와 성명을 다시 확인하세요.');
+            document.getElementById('studentDetail').classList.add('hidden');
+        }
+    }
+
+    function displayStudent(student) {
+        currentStudentRowIndex = student.rowIndex;
+        const detailDiv = document.getElementById('studentDetail');
+        const table = document.getElementById('studentDataTable');
+        table.innerHTML = '';
+
+        const row = worksheet.getRow(student.rowIndex);
+        const headerRow = worksheet.getRow(HEADER_ROW_INDEX);
+
+        headerRow.eachCell({ includeEmpty: true }, (headerCell, colNum) => {
+            const headText = getSafeText(headerCell).trim();
+            if (headText && colNum !== colMapping.remarks) {
+                const cellVal = getSafeText(row.getCell(colNum)) || '-';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<th class="text-secondary small">${headText}</th><td class="fw-bold">${cellVal}</td>`;
+                table.appendChild(tr);
+            }
+        });
+
+        detailDiv.classList.remove('hidden');
+        signaturePad.clear();
+        setTimeout(resizeCanvas, 50); 
+    }
+
+    function clearSignature() {
+        signaturePad.clear();
+    }
+
+    function confirmSignature() {
+        if (signaturePad.isEmpty()) {
+            alert('서명란에 서명해 주세요.');
+            return;
+        }
+
+        const dataURL = signaturePad.toDataURL('image/png');
+        signatures[currentStudentRowIndex] = dataURL;
+
+        alert(`확인이 완료되었습니다.`);
+        
+        document.getElementById('searchNumber').value = '';
+        document.getElementById('searchName').value = '';
+        document.getElementById('studentDetail').classList.add('hidden');
+        
+        updateDashboard();
+    }
+
+    function updateDashboard() {
+        const dashboard = document.getElementById('dashboard');
+        dashboard.innerHTML = '';
+
+        studentsData.forEach(s => {
+            const chip = document.createElement('div');
+            const isSigned = signatures[s.rowIndex] ? true : false;
+            chip.className = `student-chip ${isSigned ? 'complete' : ''}`;
+            chip.innerText = `${s.number} ${s.name}`;
+            dashboard.appendChild(chip);
+        });
+    }
+
+    async function downloadUpdatedExcel() {
+        if (Object.keys(signatures).length === 0) {
+            if (!confirm('완료된 서명이 없습니다. 원본 파일을 그대로 다운로드하시겠습니까?')) return;
+        }
+
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '파일 생성 중...';
+
+        try {
+            for (const rowIndex in signatures) {
+                const base64 = signatures[rowIndex].split(',')[1];
+                const imageId = workbook.addImage({
+                    base64: base64,
+                    extension: 'png',
+                });
+
+                // 서명 이미지가 셀에 꽉 차도록 설정 수정
+                worksheet.addImage(imageId, {
+                    tl: { col: colMapping.remarks - 1, row: parseInt(rowIndex) - 1 },
+                    br: { col: colMapping.remarks, row: parseInt(rowIndex) },
+                    editAs: 'twoCells' // 셀 크기에 맞춰 이미지 크기 조절
+                });
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `성적확인완료_${new Date().toLocaleDateString()}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error(err);
+            alert('엑셀 파일 생성 중 오류가 발생했습니다.');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+
+    function resetAll() {
+        if (confirm('모든 데이터와 서명 현황을 초기화하시겠습니까?')) {
+            location.reload();
+        }
+    }
+</script>
+
 </body>
 </html>
