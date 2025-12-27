@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>수행평가 성적 확인 시스템</title>
-    <!-- 배포 환경 안정성을 위해 검증된 라이브러리 조합 사용 -->
+    <!-- 배포 환경 안정성을 위해 공식 라이브러리 및 배포 전용 설정 적용 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <!-- 샌드박스 환경 다운로드 문제를 해결하는 전문 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -20,6 +19,8 @@
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         #loading-overlay { backdrop-filter: blur(4px); }
+        .download-button-pulse { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
     </style>
 </head>
 <body class="text-slate-900">
@@ -32,12 +33,12 @@
     <div id="app" class="max-w-6xl mx-auto p-4 md:p-10">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-5">
-                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transform rotate-3 transition-transform hover:rotate-0">
+                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transform rotate-3">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </div>
                 <div>
                     <h1 class="text-2xl font-black text-slate-800 tracking-tight">수행평가 성적 확인 시스템</h1>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Universal Deployment Optimized V7</p>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Cross-Account Security Optimized V8</p>
                 </div>
             </div>
             
@@ -46,9 +47,9 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     현황 확인
                 </button>
-                <button onclick="downloadExcel()" class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100">
+                <button id="main-download-btn" onclick="downloadExcel()" class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 download-button-pulse">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
-                    성적 확인부 다운로드
+                    최종 엑셀 다운로드
                 </button>
                 <button onclick="resetSystem()" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
@@ -68,7 +69,7 @@
                 </div>
                 <h2 class="text-3xl font-black mb-4 text-slate-800 tracking-tight">나이스 성적 파일을 업로드하세요</h2>
                 <p class="text-slate-400 mb-10 font-bold max-w-md mx-auto leading-relaxed italic text-center text-sm">
-                    "보안 샌드박스를 우회하는 새로운 다운로드 엔진이 탑재되었습니다."
+                    "어떤 계정에서든 파일 다운로드가 가능하도록 이중 보안 우회 시스템이 적용되었습니다."
                 </p>
                 <input type="file" id="fileInput" accept=".xlsx" class="hidden" onchange="handleFile(event)">
                 <label for="fileInput" class="inline-flex items-center gap-4 bg-blue-600 text-white px-14 py-5 rounded-[2rem] cursor-pointer font-black text-xl shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
@@ -83,13 +84,13 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                             본인 성적 조회
                         </h3>
-                        <div class="space-y-8">
+                        <div class="space-y-8 text-left">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest text-left">반/번호</label>
+                                <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">반/번호</label>
                                 <input type="text" id="search-num" placeholder="예: 1/1" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-blue-500 outline-none font-black text-2xl transition-all">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest text-left">성명</label>
+                                <label class="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">성명</label>
                                 <input type="text" id="search-name" placeholder="성함 입력" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-blue-500 outline-none font-black text-2xl transition-all">
                             </div>
                             <button onclick="searchStudent()" class="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-xl hover:bg-black transition-all shadow-xl active:scale-95">조회하기</button>
@@ -103,7 +104,7 @@
                         <p class="font-bold text-slate-400 text-sm">정보를 입력하여 성적을 확인하세요.</p>
                     </div>
 
-                    <div id="status-view" class="hidden p-10 h-full flex flex-col">
+                    <div id="status-view" class="hidden p-10 h-full flex flex-col text-left">
                         <div class="flex justify-between items-center mb-8 border-b pb-4">
                             <h3 class="text-xl font-black flex items-center gap-2">실시간 성적 확인 현황</h3>
                             <button onclick="toggleStatusView()" class="text-slate-400 hover:text-slate-600 transition-transform hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -128,7 +129,7 @@
     </div>
 
     <!-- 서명 모달 -->
-    <div id="signature-modal" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-50 flex items-center justify-center p-6">
+    <div id="signature-modal" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-50 flex items-center justify-center p-6 text-left">
         <div class="bg-white rounded-[4rem] w-full max-w-4xl overflow-hidden shadow-2xl animate-fade-in">
             <div class="p-10 border-b border-slate-50 flex justify-between items-center">
                 <div>
@@ -149,10 +150,25 @@
         </div>
     </div>
 
-    <!-- 로딩 오버레이 -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/95 z-[100] flex flex-col items-center justify-center">
-        <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p id="loading-text" class="font-black text-slate-800 tracking-tighter text-xl">데이터 연산 및 주입 중...</p>
+    <!-- 로딩 및 백업 다운로드 오버레이 -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/98 z-[100] flex flex-col items-center justify-center p-10 text-center">
+        <div id="spinner" class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+        <div id="loading-content">
+            <p id="loading-text" class="font-black text-slate-800 tracking-tighter text-2xl mb-4">보안 엑셀 파일을 생성 중입니다...</p>
+            <p class="text-slate-400 font-bold mb-8">잠시만 기다려 주시면 자동으로 저장 창이 열립니다.</p>
+        </div>
+        <!-- 자동 다운로드 실패 시 나타나는 수동 다운로드 버튼 -->
+        <div id="manual-download-container" class="hidden animate-fade-in">
+            <div class="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 mb-8 max-w-md">
+                <p class="font-black mb-2">자동 다운로드가 차단되었습니다.</p>
+                <p class="text-sm opacity-80 leading-relaxed font-bold">브라우저 보안 설정으로 인해 자동 저장이 막혔습니다. 아래 버튼을 클릭하여 수동으로 저장해 주세요.</p>
+            </div>
+            <a id="backup-download-link" href="#" class="inline-flex items-center gap-4 bg-emerald-500 text-white px-10 py-5 rounded-[2rem] font-black text-xl shadow-2xl hover:bg-emerald-600 transition-all uppercase">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                파일 수동 저장하기
+            </a>
+            <button onclick="closeLoadingOverlay()" class="block w-full mt-10 text-slate-400 font-black underline underline-offset-8 uppercase tracking-widest text-xs">돌아가기</button>
+        </div>
     </div>
 
     <script>
@@ -162,7 +178,7 @@
         let currentStudent = null;
         let teacherName = "담당교사";
 
-        // 배포 환경 최적화 라이브러리 체크
+        // 라이브러리 로드 체크 (GAS 샌드박스 완벽 대응)
         window.onload = function() {
             let attempt = 0;
             const checkLibs = setInterval(() => {
@@ -173,7 +189,7 @@
                     document.getElementById('upload-section').classList.remove('hidden');
                 } else if (attempt > 40) { 
                     clearInterval(checkLibs);
-                    document.getElementById('wait-msg').innerHTML = "네트워크 보안 정책으로 인해 라이브러리 로드가 지연되고 있습니다.<br>현재 계정 로그아웃 후 '시크릿 모드'를 권장합니다.";
+                    document.getElementById('wait-msg').innerHTML = "보안 환경으로 인해 로드가 지연되고 있습니다.<br>현재 계정 로그아웃 후 다시 접속해 보세요.";
                     document.getElementById('wait-msg').classList.add('text-red-500');
                 }
             }, 500);
@@ -211,6 +227,10 @@
             if (!file) return;
 
             document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('spinner').classList.remove('hidden');
+            document.getElementById('manual-download-container').classList.add('hidden');
+            document.getElementById('loading-content').classList.remove('hidden');
+
             const reader = new FileReader();
             reader.onload = async (evt) => {
                 try {
@@ -267,7 +287,7 @@
             const name = document.getElementById('search-name').value.trim();
             const found = studentData.find(s => s.num === num && s.name === name);
             if (found) { currentStudent = found; showStudentDetail(); }
-            else alert("학생 정보를 찾을 수 없습니다.");
+            else alert("정보가 일치하지 않습니다. 다시 확인해 주세요.");
         }
 
         function showStudentDetail() {
@@ -277,7 +297,7 @@
             document.getElementById('auth-panel').classList.add('opacity-20', 'blur-sm', 'pointer-events-none');
 
             document.getElementById('detail-name').innerText = currentStudent.name;
-            document.getElementById('detail-num').innerText = `번호: ${currentStudent.num}`;
+            document.getElementById('detail-num').innerText = `반/번호: ${currentStudent.num}`;
             
             const container = document.getElementById('score-container');
             container.innerHTML = currentStudent.scores.map(s => `
@@ -302,7 +322,7 @@
                         <div class="bg-white p-4 rounded-2xl shadow-sm mb-4 w-full h-32 flex items-center justify-center overflow-hidden border">
                             <img src="${signatures[currentStudent.id]}" class="h-full w-full object-contain">
                         </div>
-                        <button onclick="openSignatureModal()" class="text-emerald-500 font-bold underline text-sm uppercase">서명 다시 작성</button>
+                        <button onclick="openSignatureModal()" class="text-emerald-500 font-bold underline text-sm uppercase">서명 수정</button>
                     </div>
                 `;
             } else {
@@ -353,7 +373,7 @@
 
         function renderStatusList() {
             document.getElementById('status-list').innerHTML = studentData.map(s => `
-                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white transition-colors">
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white transition-colors text-left">
                     <div class="flex items-center gap-5">
                         <span class="text-xs font-black text-slate-400 w-10">${s.num}</span>
                         <span class="text-lg font-black text-slate-800">${s.name}</span>
@@ -368,21 +388,23 @@
             const detailView = document.getElementById('student-detail');
             const emptyView = document.getElementById('empty-state');
             if (statusView.classList.contains('hidden')) {
-                statusView.classList.remove('hidden');
-                detailView.classList.add('hidden');
-                emptyView.classList.add('hidden');
+                statusView.classList.remove('hidden'); detailView.classList.add('hidden'); emptyView.classList.add('hidden');
             } else {
-                statusView.classList.add('hidden');
-                if(currentStudent) detailView.classList.remove('hidden');
-                else emptyView.classList.remove('hidden');
+                statusView.classList.add('hidden'); if(currentStudent) detailView.classList.remove('hidden'); else emptyView.classList.remove('hidden');
             }
         }
 
-        // [최종 해결책] 구글 앱스 스크립트 샌드박스 보안을 뚫는 강제 파일 추출 로직
+        function closeLoadingOverlay() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        // [최종 해결책] 구글 샌드박스를 우회하는 2단계 강제 다운로드 로직
         async function downloadExcel() {
             if (!originalBuffer) return;
-            document.getElementById('loading-text').innerText = "보안 샌드박스 우회 파일 생성 중...";
             document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('spinner').classList.remove('hidden');
+            document.getElementById('loading-content').classList.remove('hidden');
+            document.getElementById('manual-download-container').classList.add('hidden');
 
             try {
                 const workbook = new ExcelJS.Workbook();
@@ -411,40 +433,37 @@
                 const buf = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 
-                // 1. FileReader를 이용한 DataURL 추출 방식 (가장 안정적)
+                // 1단계: 자동 다운로드 시도 (FileSaver.js 이용)
+                try {
+                    window.saveAs(blob, `[최종확인]_${teacherName}_수행평가.xlsx`);
+                    // 저장 창이 뜬 후 일정 시간 뒤 로딩창 닫기
+                    setTimeout(closeLoadingOverlay, 3000);
+                } catch(e) {
+                    throw new Error("Automatic download blocked");
+                }
+
+                // 2단계: 자동 실패 시 수동 다운로드 인터페이스로 전환
                 const reader = new FileReader();
-                reader.onloadend = function() {
-                    const base64data = reader.result;
-                    const a = document.createElement("a");
-                    a.style.display = 'none';
-                    a.href = base64data;
-                    a.download = `[최종확인완료]_${teacherName}_수행평가.xlsx`;
-                    document.body.appendChild(a);
-                    a.click();
+                reader.onload = function(event) {
+                    const dataUrl = event.target.result;
+                    const backupBtn = document.getElementById('backup-download-link');
+                    backupBtn.href = dataUrl;
+                    backupBtn.download = `[수동저장]_${teacherName}_수행평가.xlsx`;
                     
-                    setTimeout(() => {
-                        document.body.removeChild(a);
-                    }, 500);
+                    document.getElementById('spinner').classList.add('hidden');
+                    document.getElementById('loading-content').classList.add('hidden');
+                    document.getElementById('manual-download-container').classList.remove('hidden');
                 };
-                
-                // Blob을 읽어서 텍스트 스트림으로 전환 (샌드박스 허용 범위)
                 reader.readAsDataURL(blob);
-                
+
             } catch (e) {
                 console.error(e);
-                // 만약 위의 방식도 실패할 경우 FileSaver.js를 최후의 수단으로 병행
-                try {
-                    const bufFallback = await workbook.xlsx.writeBuffer();
-                    saveAs(new Blob([bufFallback]), `[백업저장]_${teacherName}_수행평가.xlsx`);
-                } catch(err) {
-                    alert("구글 보안 정책으로 인해 다운로드가 차단되었습니다. 크롬 브라우저 상단 주소창 옆 '팝업 차단 해제'를 확인해 주세요.");
-                }
-            } finally {
-                document.getElementById('loading-overlay').classList.add('hidden');
+                alert("엑셀 생성 중 오류가 발생했습니다. 파일 형식을 다시 확인해 주세요.");
+                closeLoadingOverlay();
             }
         }
 
-        function resetSystem() { if(confirm("모든 데이터를 초기화하시겠습니까?")) window.location.reload(); }
+        function resetSystem() { if(confirm("데이터를 초기화하시겠습니까?")) window.location.reload(); }
     </script>
 </body>
 </html>
