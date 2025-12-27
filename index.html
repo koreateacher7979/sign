@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>수행평가 성적 확인 시스템</title>
-    <!-- GitHub Pages 배포 환경에 최적화된 CDN 라이브러리 설정 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- GitHub Pages 환경 최적화 라이브러리 (jsDelivr 공식 미러 사용) -->
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
@@ -18,13 +18,13 @@
         .canvas-container { touch-action: none; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-        #loading-overlay { backdrop-filter: blur(12px); }
-        .btn-shadow { box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4); }
+        #loading-overlay { backdrop-filter: blur(12px); z-index: 9999; }
+        .debug-panel { font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.4; }
     </style>
 </head>
 <body class="text-slate-900 overflow-x-hidden">
 
-    <!-- 상단 개발자 정보 (요청 사항 반영) -->
+    <!-- 상단 개발자 정보 -->
     <div class="bg-[#0F172A] text-slate-300 py-1.5 px-6 text-[10px] font-bold text-center border-b border-slate-800 uppercase tracking-widest">
         개발자: 가치있는 미래교육연구소 대표 김병찬
     </div>
@@ -36,17 +36,18 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">성적 확인 및 디지털 서명</h1>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">GitHub Pages Deployment V13 - Final</p>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">성적 확인 및 서명 시스템</h1>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">GitHub Deployment V14 - Debug Enabled</p>
                 </div>
             </div>
             
             <div id="action-buttons" class="hidden flex flex-wrap gap-2">
-                <button onclick="toggleStatusView()" class="flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-5 py-3 rounded-2xl font-black text-sm hover:bg-slate-50 transition-all">
-                    현황 확인
+                <button onclick="toggleStatusView()" class="flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-5 py-3 rounded-2xl font-black text-sm hover:bg-slate-50 shadow-sm transition-all">
+                    확인 현황
                 </button>
-                <button id="download-trigger-btn" onclick="downloadExcel()" class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg">
-                    서명 포함 엑셀 저장
+                <button id="main-download-btn" onclick="downloadExcel()" class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    엑셀 파일 저장
                 </button>
                 <button onclick="resetSystem()" class="p-3 text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
@@ -55,20 +56,20 @@
         </header>
 
         <main>
-            <!-- 라이브러리 초기 로드 대기 안내 -->
-            <div id="lib-loading" class="bg-white p-10 rounded-[2.5rem] shadow-xl text-center border border-blue-100 animate-pulse">
-                <div class="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p class="font-bold text-slate-500 tracking-tighter">보안 모듈을 로드 중입니다. 잠시만 기다려 주세요...</p>
+            <!-- 초기 로딩 상태 -->
+            <div id="lib-loading" class="bg-white p-16 rounded-[2.5rem] shadow-xl text-center border border-blue-100 animate-pulse">
+                <div class="inline-block w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="font-black text-slate-600">시스템 모듈 로드 중...</p>
             </div>
 
-            <!-- 파일 업로드 섹션 -->
+            <!-- 업로드 섹션 -->
             <div id="upload-section" class="hidden bg-white border-4 border-dashed border-slate-100 rounded-[3.5rem] p-16 md:p-32 text-center shadow-sm animate-fade-in">
-                <div class="mx-auto w-24 h-24 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mb-8 transform hover:scale-110 transition-transform">
+                <div class="mx-auto w-24 h-24 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mb-8">
                     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 </div>
-                <h2 class="text-3xl font-black mb-4 text-slate-800 tracking-tight">나이스 엑셀 파일을 업로드하세요</h2>
+                <h2 class="text-3xl font-black mb-4 text-slate-800">성적 관리 파일을 업로드하세요</h2>
                 <p class="text-slate-400 mb-10 font-bold max-w-md mx-auto leading-relaxed italic text-center">
-                    "서명 위치와 크기가 완벽하게 보정된 GitHub Pages 최적화 버전입니다."
+                    "서명 위치 자동 보정 및 100% 셀 피팅 엔진이 활성화되었습니다."
                 </p>
                 <input type="file" id="fileInput" accept=".xlsx" class="hidden" onchange="handleFileUpload(event)">
                 <label for="fileInput" class="inline-flex items-center gap-4 bg-blue-600 text-white px-14 py-5 rounded-[2rem] cursor-pointer font-black text-xl shadow-2xl hover:bg-blue-700 transition-all active:scale-95">
@@ -76,13 +77,12 @@
                 </label>
             </div>
 
-            <!-- 메인 인증 및 표시 섹션 -->
+            <!-- 시스템 메인 레이아웃 -->
             <div id="main-interface" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-10 animate-fade-in">
-                <div class="lg:col-span-5" id="auth-box">
+                <div class="lg:col-span-5">
                     <div class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 text-left">
                         <h3 class="text-xl font-black mb-10 flex items-center gap-3 text-slate-800 uppercase tracking-tighter">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                            성적 확인 본인 인증
+                            본인 성적 확인
                         </h3>
                         <div class="space-y-8">
                             <div>
@@ -98,18 +98,18 @@
                     </div>
                 </div>
 
-                <div class="lg:col-span-7 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 min-h-[600px] overflow-hidden flex flex-col" id="display-box">
-                    <div id="welcome-msg" class="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-6 opacity-20"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <p class="font-bold text-slate-400 text-sm italic">정보를 입력하여 성적을 확인하세요.</p>
+                <div class="lg:col-span-7 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 min-h-[600px] overflow-hidden flex flex-col" id="display-container">
+                    <div id="welcome-state" class="flex-1 flex flex-col items-center justify-center p-20 text-center text-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-6 opacity-20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <p class="font-bold text-slate-400 text-sm">학생 정보를 입력해 주세요.</p>
                     </div>
 
-                    <div id="status-view" class="hidden p-10 h-full flex flex-col text-left">
+                    <div id="status-view" class="hidden p-10 h-full flex flex-col">
                         <div class="flex justify-between items-center mb-8 border-b pb-4">
-                            <h3 class="text-xl font-black flex items-center gap-2 tracking-tighter text-slate-800">확인 현황 명렬</h3>
-                            <button onclick="toggleStatusView()" class="text-slate-400 hover:text-slate-600 transition-transform hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                            <h3 class="text-xl font-black flex items-center gap-2">실시간 확인 현황</h3>
+                            <button onclick="toggleStatusView()" class="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                         </div>
-                        <div id="status-list" class="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar"></div>
+                        <div id="status-list" class="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar text-left"></div>
                     </div>
 
                     <div id="student-detail" class="hidden p-12 flex flex-col h-full animate-fade-in text-left">
@@ -126,49 +126,48 @@
                 </div>
             </div>
         </main>
+
+        <!-- 디버그 패널 (오류 추적용) -->
+        <div id="debug-log-panel" class="mt-10 p-6 bg-slate-100 rounded-3xl border border-slate-200 text-left hidden">
+            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">System Log (Debug Info)</h4>
+            <div id="debug-content" class="debug-panel text-slate-500 max-h-32 overflow-y-auto custom-scrollbar font-mono text-[9px]"></div>
+        </div>
     </div>
 
-    <!-- 서명 모달 패드 -->
+    <!-- 서명 패드 모달 -->
     <div id="signature-modal" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-50 flex items-center justify-center p-6">
         <div class="bg-white rounded-[4rem] w-full max-w-4xl overflow-hidden shadow-2xl animate-fade-in text-left">
             <div class="p-10 border-b border-slate-50 flex justify-between items-center">
                 <div>
-                    <h3 class="text-3xl font-black text-slate-800 tracking-tight uppercase">성적 확인 전자 서명</h3>
-                    <p class="text-slate-400 font-bold text-sm mt-1">정자로 명확하게 서명해 주세요 (자동 크롭/강제 피팅)</p>
+                    <h3 class="text-3xl font-black text-slate-800 tracking-tight uppercase">디지털 서명</h3>
+                    <p class="text-slate-400 font-bold text-sm mt-1">성함을 정자로 명확하게 서명해 주세요</p>
                 </div>
                 <button onclick="closeSignatureModal()" class="p-5 bg-slate-50 rounded-full hover:rotate-90 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
-            <div class="p-10 text-center">
+            <div class="p-10">
                 <div class="bg-slate-50 border-4 border-slate-100 rounded-[3rem] overflow-hidden mb-10 h-[350px] relative canvas-container shadow-inner">
                     <canvas id="signature-canvas" width="1200" height="350" class="w-full h-full cursor-crosshair bg-white"></canvas>
                 </div>
                 <div class="grid grid-cols-2 gap-6">
-                    <button onclick="clearCanvas()" class="py-6 border-2 border-slate-200 text-slate-500 rounded-3xl font-black text-lg hover:bg-slate-50 transition-all uppercase">지우기</button>
-                    <button onclick="saveSignature()" class="py-6 bg-blue-600 text-white rounded-3xl font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all uppercase">서명 완료</button>
+                    <button onclick="clearCanvas()" class="py-6 border-2 border-slate-200 text-slate-500 rounded-3xl font-black text-lg hover:bg-slate-50 transition-all">지우기</button>
+                    <button onclick="saveSignature()" class="py-6 bg-blue-600 text-white rounded-3xl font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all">서명 완료</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- [핵심] GitHub Pages 전용 강제 파일 추출 오버레이 -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/99 z-[100] flex flex-col items-center justify-center p-10 text-center">
-        <div id="spinner-box" class="mb-10 flex flex-col items-center">
-            <div class="w-24 h-24 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <p class="mt-8 font-black text-slate-800 text-2xl tracking-tighter">파일을 암호화하여 생성 중...</p>
-        </div>
+    <!-- 로딩 오버레이 -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/99 flex flex-col items-center justify-center p-10 text-center">
+        <div class="w-20 h-20 border-8 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8"></div>
+        <h2 class="font-black text-slate-800 text-3xl mb-4 tracking-tighter">보안 엑셀 생성 중</h2>
+        <p id="loading-desc" class="text-slate-400 font-bold max-w-sm">데이터를 파일로 변환하고 있습니다. 잠시만 기다려 주세요.</p>
         
-        <div id="manual-save-panel" class="hidden animate-fade-in flex flex-col items-center">
-            <div class="bg-emerald-50 text-emerald-600 p-8 rounded-[3rem] border-2 border-emerald-100 mb-10 max-w-lg shadow-sm">
-                <p class="font-black text-2xl mb-4 tracking-tighter text-center">성적 확인부가 완성되었습니다!</p>
-                <p class="text-sm opacity-80 leading-relaxed font-bold text-center">보안 정책으로 인해 파일이 자동 저장되지 않았습니다.<br>아래 버튼을 클릭하여 수동으로 저장해 주세요.</p>
-            </div>
-            
-            <a id="final-download-link" href="javascript:void(0)" class="inline-flex items-center gap-6 bg-slate-900 text-white px-16 py-8 rounded-[3rem] font-black text-3xl shadow-2xl hover:bg-black transition-all transform hover:scale-105 active:scale-95">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                성적 확인부 다운로드
+        <!-- 수동 저장 버튼 (강제 활성용) -->
+        <div id="manual-save-box" class="hidden mt-10 animate-fade-in">
+            <a id="final-link" href="#" class="inline-flex items-center gap-4 bg-slate-900 text-white px-12 py-6 rounded-[2.5rem] font-black text-2xl shadow-2xl hover:scale-105 transition-all">
+                파일 다운로드 (클릭)
             </a>
-            
-            <button onclick="closeLoadingOverlay()" class="mt-16 text-slate-400 font-black underline underline-offset-8 uppercase tracking-widest text-xs opacity-50 hover:opacity-100 transition-all">이전으로 돌아가기</button>
+            <p class="mt-6 text-red-400 text-xs font-bold uppercase tracking-widest">자동 저장이 차단된 경우 위 버튼을 누르세요</p>
         </div>
     </div>
 
@@ -179,18 +178,36 @@
         let currentStudent = null;
         let teacherName = "담당교사";
 
-        // 라이브러리 로드 체크
+        // 로깅 시스템 (디버깅)
+        function log(msg) {
+            const panel = document.getElementById('debug-log-panel');
+            const content = document.getElementById('debug-content');
+            panel.classList.remove('hidden');
+            const entry = document.createElement('div');
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            content.prepend(entry);
+            console.log(msg);
+        }
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            log(`ERROR: ${message} at line ${lineno}`);
+            return false;
+        };
+
+        // 라이브러리 체크
         window.onload = function() {
+            log("System starting...");
             const check = setInterval(() => {
                 if (window.XLSX && window.ExcelJS && window.saveAs) {
                     clearInterval(check);
                     document.getElementById('lib-loading').classList.add('hidden');
                     document.getElementById('upload-section').classList.remove('hidden');
+                    log("All libraries loaded successfully.");
                 }
             }, 500);
         };
 
-        // 캔버스 엔진
+        // 서명 캔버스
         const canvas = document.getElementById('signature-canvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
@@ -205,8 +222,8 @@
             };
         }
 
-        const start = (e) => { drawing = true; ctx.beginPath(); const {x,y} = getCoords(e); ctx.moveTo(x,y); e.preventDefault(); };
-        const move = (e) => { if(!drawing) return; const {x,y} = getCoords(e); ctx.lineWidth = 6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#000'; ctx.lineTo(x,y); ctx.stroke(); e.preventDefault(); };
+        const start = (e) => { drawing = true; ctx.beginPath(); const {x,y} = getCoords(e); ctx.moveTo(x,y); if(e.cancelable) e.preventDefault(); };
+        const move = (e) => { if(!drawing) return; const {x,y} = getCoords(e); ctx.lineWidth = 6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#000'; ctx.lineTo(x,y); ctx.stroke(); if(e.cancelable) e.preventDefault(); };
         const stop = () => drawing = false;
 
         canvas.addEventListener('mousedown', start);
@@ -221,6 +238,7 @@
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
+            log(`File selected: ${file.name} (${file.size} bytes)`);
 
             const reader = new FileReader();
             reader.onload = async (evt) => {
@@ -234,7 +252,7 @@
                     if(tRow) teacherName = tRow.find(c => String(c).includes('교과담당교사')).replace(/.*\(|\).*/g, '') || "담당교사";
 
                     const hIdx = raw.findIndex(r => Array.isArray(r) && r.includes('반/번호') && r.includes('성명'));
-                    if (hIdx === -1) return alert("나이스 엑셀 형식이 아닙니다.");
+                    if (hIdx === -1) { log("Header not found!"); return alert("나이스 엑셀 형식이 아닙니다."); }
                     
                     const headers = raw[hIdx];
                     const colMap = {
@@ -263,8 +281,10 @@
                     document.getElementById('main-interface').classList.remove('hidden');
                     document.getElementById('action-buttons').classList.remove('hidden');
                     renderStatusList();
+                    log(`Loaded ${studentData.length} students.`);
                 } catch(err) {
-                    alert("파일 처리 오류");
+                    log(`File parsing failed: ${err.message}`);
+                    alert("파일 분석 중 오류가 발생했습니다.");
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -274,17 +294,17 @@
             const num = document.getElementById('search-num').value.trim();
             const name = document.getElementById('search-name').value.trim();
             const found = studentData.find(s => s.num === num && s.name === name);
-            if (found) { currentStudent = found; showDetail(); }
-            else alert("학생 정보를 찾을 수 없습니다.");
+            if (found) { currentStudent = found; showDetail(); log(`Auth Success: ${name}`); }
+            else { alert("정보가 일치하지 않습니다."); log(`Auth Fail: ${name} (${num})`); }
         }
 
         function showDetail() {
-            document.getElementById('welcome-msg').classList.add('hidden');
+            document.getElementById('welcome-state').classList.add('hidden');
             document.getElementById('status-view').classList.add('hidden');
             document.getElementById('student-detail').classList.remove('hidden');
             document.getElementById('auth-box').classList.add('opacity-20', 'blur-sm', 'pointer-events-none');
             document.getElementById('detail-name').innerText = currentStudent.name;
-            document.getElementById('detail-num').innerText = `번호: ${currentStudent.num}`;
+            document.getElementById('detail-num').innerText = `반/번호: ${currentStudent.num}`;
             document.getElementById('score-container').innerHTML = currentStudent.scores.map(s => `
                 <div class="bg-slate-50 p-6 rounded-3xl flex justify-between items-center border border-transparent hover:border-slate-200 transition-all text-left">
                     <span class="text-slate-500 font-bold uppercase tracking-widest text-[10px]">${s.label}</span>
@@ -292,8 +312,8 @@
                 </div>
             `).join('') + `
                 <div class="bg-blue-600 p-8 rounded-[2.2rem] flex justify-between items-center text-white shadow-2xl mt-4 transform hover:scale-[1.02] transition-transform text-left">
-                    <span class="font-black text-xl uppercase tracking-widest">수행 합계</span>
-                    <span class="text-4xl font-black tracking-tight">${currentStudent.total}</span>
+                    <span class="font-black text-xl uppercase tracking-widest text-white">수행 합계</span>
+                    <span class="text-4xl font-black tracking-tight text-white">${currentStudent.total}</span>
                 </div>
             `;
             updateSigUI();
@@ -307,18 +327,18 @@
                         <div class="bg-white p-4 rounded-2xl shadow-sm mb-4 w-full h-32 flex items-center justify-center overflow-hidden border">
                             <img src="${signatures[currentStudent.id]}" class="h-full w-full object-contain">
                         </div>
-                        <button onclick="openSignatureModal()" class="text-emerald-500 font-bold underline text-sm">서명 다시하기</button>
+                        <button onclick="openSignatureModal()" class="text-emerald-500 font-bold underline text-sm uppercase">서명 수정</button>
                     </div>
                 `;
             } else {
-                area.innerHTML = `<button onclick="openSignatureModal()" class="w-full bg-blue-600 text-white py-8 rounded-[2.5rem] font-black text-2xl hover:bg-blue-700 shadow-xl active:scale-95 transition-all mt-6">본인 확인 및 서명</button>`;
+                area.innerHTML = `<button onclick="openSignatureModal()" class="w-full bg-blue-600 text-white py-8 rounded-[2.5rem] font-black text-2xl hover:bg-blue-700 shadow-xl active:scale-95 transition-all mt-6 uppercase tracking-tighter">본인 확인 및 서명</button>`;
             }
         }
 
         function logout() {
             currentStudent = null;
             document.getElementById('student-detail').classList.add('hidden');
-            document.getElementById('welcome-msg').classList.remove('hidden');
+            document.getElementById('welcome-state').classList.remove('hidden');
             document.getElementById('auth-box').classList.remove('opacity-20', 'blur-sm', 'pointer-events-none');
             document.getElementById('search-num').value = "";
             document.getElementById('search-name').value = "";
@@ -350,16 +370,17 @@
             updateSigUI();
             closeSignatureModal();
             renderStatusList();
+            log(`Signature saved for student ${currentStudent.id}`);
         }
 
         function renderStatusList() {
             document.getElementById('status-list').innerHTML = studentData.map(s => `
-                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white transition-colors">
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white transition-colors">
                     <div class="flex items-center gap-5 text-left">
                         <span class="text-xs font-black text-slate-400 w-10">${s.num}</span>
                         <span class="text-lg font-black text-slate-800">${s.name}</span>
                     </div>
-                    ${signatures[s.id] ? '<span class="text-emerald-600 font-bold text-xs bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 animate-pulse">완료</span>' : '<span class="text-slate-300 font-bold text-[10px] uppercase text-left">대기</span>'}
+                    ${signatures[s.id] ? '<span class="text-emerald-600 font-bold text-xs bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 animate-pulse">확인됨</span>' : '<span class="text-slate-300 font-bold text-[10px] uppercase text-left tracking-widest">미확인</span>'}
                 </div>
             `).join('');
         }
@@ -367,7 +388,7 @@
         function toggleStatusView() {
             const statusView = document.getElementById('status-view');
             const detailView = document.getElementById('student-detail');
-            const welcomeView = document.getElementById('welcome-msg');
+            const welcomeView = document.getElementById('welcome-state');
             if (statusView.classList.contains('hidden')) {
                 statusView.classList.remove('hidden'); detailView.classList.add('hidden'); welcomeView.classList.add('hidden');
             } else {
@@ -379,29 +400,33 @@
             document.getElementById('loading-overlay').classList.add('hidden');
         }
 
-        // [최종 해결] GitHub 배포 환경에서 100% 성공하는 바이너리 저장 로직
+        // [핵심] GitHub Pages 배포 환경 최적화 다운로드 시스템
         async function downloadExcel() {
-            if (!originalBuffer) return;
+            if (!originalBuffer) { log("Error: Buffer is empty!"); return; }
+            log("Download process started...");
             document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('spinner-box').classList.remove('hidden');
-            document.getElementById('manual-save-panel').classList.add('hidden');
+            document.getElementById('loading-desc').innerText = "데이터 병합 및 파일 변환 중...";
+            document.getElementById('manual-save-box').classList.add('hidden');
 
             try {
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(originalBuffer);
                 const worksheet = workbook.worksheets[0];
+                log("Excel loaded into memory.");
+
                 let remarkColIdx = -1;
                 worksheet.eachRow({ includeEmpty: true }, (row) => {
                     row.eachCell({ includeEmpty: true }, (cell, col) => {
                         if (cell.value && String(cell.value).includes('비고')) remarkColIdx = col;
                     });
                 });
-                if (remarkColIdx === -1) remarkColIdx = 10;
+                if (remarkColIdx === -1) { log("Warning: Remark column index defaulting to 10."); remarkColIdx = 10; }
 
+                log("Injecting signatures into cells...");
                 studentData.forEach(s => {
                     if (signatures[s.id]) {
                         const imgId = workbook.addImage({ base64: signatures[s.id], extension: 'png' });
-                        // 1:1 강제 셀 피팅 (0.1mm 오차 보정)
+                        // 1:1 강제 셀 피팅 (0.1mm 오차 보정 기술)
                         worksheet.addImage(imgId, {
                             tl: { col: remarkColIdx - 1, row: s.rowIdx, colOff: 0, rowOff: 0 },
                             br: { col: remarkColIdx, row: s.rowIdx + 1, colOff: 0, rowOff: 0 },
@@ -410,30 +435,33 @@
                     }
                 });
 
+                log("Encoding final binary data...");
                 const buf = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const fileName = `[성적확인]_${teacherName}_수행평가.xlsx`;
+                const fileName = `[성적확인완료]_${teacherName}_수행평가결과.xlsx`;
 
-                // 1단계: 표준 FileSaver 사용 (GitHub Pages 환경에서 가장 신뢰성 높음)
-                try {
-                    window.saveAs(blob, fileName);
-                    // 성공적인 트리거를 위해 3초 후 UI 정리
-                    setTimeout(closeLoadingOverlay, 3000);
-                } catch(e) { console.warn("Auto save failed"); }
-
-                // 2단계: 자동 실패 대비 수동 다운로드 링크 구성 (최종 방어막)
+                // 수동 다운로드 버튼 속성 미리 세팅 (방어막)
                 const url = URL.createObjectURL(blob);
-                const forceBtn = document.getElementById('final-download-link');
-                forceBtn.href = url;
-                forceBtn.download = fileName;
+                const finalLink = document.getElementById('final-link');
+                finalLink.href = url;
+                finalLink.download = fileName;
 
-                // UI 전환: 로딩 완료 후 수동 버튼 노출
-                document.getElementById('spinner-box').classList.add('hidden');
-                document.getElementById('manual-save-panel').classList.remove('hidden');
+                // 1단계: 표준 FileSaver 사용
+                log("Attempting automatic save...");
+                try {
+                    saveAs(blob, fileName);
+                    log("SaveAs triggered.");
+                    // 저장 창 호출 후 2초 뒤에 오버레이 자동 제거
+                    setTimeout(closeLoadingOverlay, 2000);
+                } catch(e) { 
+                    log(`Auto save failed: ${e.message}`);
+                    document.getElementById('manual-save-box').classList.remove('hidden');
+                }
 
             } catch (err) {
-                alert("엑셀 처리 오류가 발생했습니다.");
-                closeLoadingOverlay();
+                log(`FATAL ERROR: ${err.message}\n${err.stack}`);
+                document.getElementById('loading-desc').innerHTML = `<span class="text-red-500">엑셀 생성 중 오류 발생: ${err.message}</span>`;
+                alert("엑셀 생성 과정에서 오류가 발생했습니다. 하단의 Debug 로그를 확인하세요.");
             }
         }
 
