@@ -8,11 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <!-- [핵심 추가] 샌드박스 환경 다운로드 문제를 해결하는 전문 라이브러리 -->
+    <!-- 샌드박스 환경 다운로드 문제를 해결하는 전문 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
@@ -37,7 +37,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-black text-slate-800 tracking-tight">수행평가 성적 확인 시스템</h1>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Sandbox Protocol Optimized V6</p>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Universal Deployment Optimized V7</p>
                 </div>
             </div>
             
@@ -68,7 +68,7 @@
                 </div>
                 <h2 class="text-3xl font-black mb-4 text-slate-800 tracking-tight">나이스 성적 파일을 업로드하세요</h2>
                 <p class="text-slate-400 mb-10 font-bold max-w-md mx-auto leading-relaxed italic text-center text-sm">
-                    "모든 브라우저 환경에서 작동하도록 강화된 샌드박스 다운로드 시스템이 적용되었습니다."
+                    "보안 샌드박스를 우회하는 새로운 다운로드 엔진이 탑재되었습니다."
                 </p>
                 <input type="file" id="fileInput" accept=".xlsx" class="hidden" onchange="handleFile(event)">
                 <label for="fileInput" class="inline-flex items-center gap-4 bg-blue-600 text-white px-14 py-5 rounded-[2rem] cursor-pointer font-black text-xl shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
@@ -117,7 +117,7 @@
                                 <h2 id="detail-name" class="text-5xl font-black text-slate-900 tracking-tighter">성함</h2>
                                 <p id="detail-num" class="text-xl font-bold text-blue-600 mt-1">반/번호</p>
                             </div>
-                            <button onclick="logout()" class="text-red-500 bg-red-50 px-6 py-3 rounded-2xl font-black text-sm hover:bg-red-100 transition-colors">확인 종료</button>
+                            <button onclick="logout()" class="text-red-500 bg-red-50 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-100 transition-colors">확인 종료</button>
                         </div>
                         <div id="score-container" class="space-y-3 mb-10 flex-1 overflow-y-auto custom-scrollbar"></div>
                         <div id="signature-placeholder"></div>
@@ -167,14 +167,13 @@
             let attempt = 0;
             const checkLibs = setInterval(() => {
                 attempt++;
-                // 필수 라이브러리 3개가 모두 로드되었는지 확인
                 if (window.XLSX && window.ExcelJS && window.saveAs) {
                     clearInterval(checkLibs);
                     document.getElementById('lib-waiting').classList.add('hidden');
                     document.getElementById('upload-section').classList.remove('hidden');
-                } else if (attempt > 30) { 
+                } else if (attempt > 40) { 
                     clearInterval(checkLibs);
-                    document.getElementById('wait-msg').innerHTML = "보안 환경으로 인해 로드가 지연되고 있습니다.<br>현재 계정 로그아웃 또는 시크릿 모드를 사용해 주세요.";
+                    document.getElementById('wait-msg').innerHTML = "네트워크 보안 정책으로 인해 라이브러리 로드가 지연되고 있습니다.<br>현재 계정 로그아웃 후 '시크릿 모드'를 권장합니다.";
                     document.getElementById('wait-msg').classList.add('text-red-500');
                 }
             }, 500);
@@ -268,7 +267,7 @@
             const name = document.getElementById('search-name').value.trim();
             const found = studentData.find(s => s.num === num && s.name === name);
             if (found) { currentStudent = found; showStudentDetail(); }
-            else alert("학생 정보를 정확히 입력해 주세요.");
+            else alert("학생 정보를 찾을 수 없습니다.");
         }
 
         function showStudentDetail() {
@@ -379,10 +378,10 @@
             }
         }
 
-        // [결정적 수정] 샌드박스 보안을 뚫는 전문 라이브러리 방식의 다운로드 함수
+        // [최종 해결책] 구글 앱스 스크립트 샌드박스 보안을 뚫는 강제 파일 추출 로직
         async function downloadExcel() {
             if (!originalBuffer) return;
-            document.getElementById('loading-text').innerText = "보안 환경 최적화 파일을 생성 중...";
+            document.getElementById('loading-text').innerText = "보안 샌드박스 우회 파일 생성 중...";
             document.getElementById('loading-overlay').classList.remove('hidden');
 
             try {
@@ -409,17 +408,37 @@
                     }
                 });
 
-                // 바이너리 데이터 생성
                 const buf = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 
-                // [해결책] FileSaver.js 라이브러리의 saveAs 함수 사용
-                // 이 함수는 GAS의 IFRAME 샌드박스 내에서도 브라우저의 저장 창을 안정적으로 호출합니다.
-                saveAs(blob, `[최종성적확인]_${teacherName}_수행평가.xlsx`);
+                // 1. FileReader를 이용한 DataURL 추출 방식 (가장 안정적)
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    const base64data = reader.result;
+                    const a = document.createElement("a");
+                    a.style.display = 'none';
+                    a.href = base64data;
+                    a.download = `[최종확인완료]_${teacherName}_수행평가.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                    }, 500);
+                };
+                
+                // Blob을 읽어서 텍스트 스트림으로 전환 (샌드박스 허용 범위)
+                reader.readAsDataURL(blob);
                 
             } catch (e) {
                 console.error(e);
-                alert("샌드박스 보안 정책으로 인해 다운로드가 실패했습니다. '크롬 시크릿 창'을 사용하시면 100% 작동합니다.");
+                // 만약 위의 방식도 실패할 경우 FileSaver.js를 최후의 수단으로 병행
+                try {
+                    const bufFallback = await workbook.xlsx.writeBuffer();
+                    saveAs(new Blob([bufFallback]), `[백업저장]_${teacherName}_수행평가.xlsx`);
+                } catch(err) {
+                    alert("구글 보안 정책으로 인해 다운로드가 차단되었습니다. 크롬 브라우저 상단 주소창 옆 '팝업 차단 해제'를 확인해 주세요.");
+                }
             } finally {
                 document.getElementById('loading-overlay').classList.add('hidden');
             }
